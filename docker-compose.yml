@@ -1,0 +1,126 @@
+# -------------------------------------------------------------------
+# Archivo: docker-compose.yml
+# Propósito: Entorno local de Zookeeper + Kafka + PostgreSQL + CloudBeaver
+# -------------------------------------------------------------------
+
+# Definimos volúmenes nombrados para persistencia de datos
+volumes:
+  zookeeper_data:
+  zookeeper_logs:
+  kafka_data:
+  postgres_data:
+  cloudbeaver_data:
+
+# Creamos una red dedicada para comunicaciones internas
+networks:
+  backend_net:
+    driver: bridge
+
+services:
+  # --------------------
+  # ZOOKEEPER
+  # --------------------
+  zookeeper:
+    image: docker.io/bitnami/zookeeper:3.8.1
+    networks:
+      - backend_net
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_ENABLE_AUTH=no
+    volumes:
+      - zookeeper_data:/bitnami/zookeeper/data
+      - zookeeper_logs:/bitnami/zookeeper/logs
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'ruok' | nc localhost 2181 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # --------------------
+  # KAFKA (Bitnami)
+  # --------------------
+  kafka:
+    image: docker.io/bitnami/kafka:3.5.0
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    networks:
+      - backend_net
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      - KAFKA_ENABLE_KRAFT=false
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:29092
+      #- KAFKA_CFG_LISTENERS=PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      #- KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      #- KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    volumes:
+      - kafka_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # --------------------
+  # POSTGRESQL
+  # --------------------
+  postgres:
+    image: postgres:15
+    networks:
+      - backend_net
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgresdb
+      - PGDATA=/var/lib/postgresql/data
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # --------------------
+  # CLOUDBEAVER (Interfaz web para DBs)
+  # --------------------
+  cloudbeaver:
+    image: dbeaver/cloudbeaver:23.0.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend_net
+    ports:
+      - "8080:8978"
+    environment:
+      - CB_SERVER_NAME=CloudBeaver
+      - CB_SERVER_URL=http://localhost:8080
+      - CB_ADMIN_NAME=admin
+      - CB_ADMIN_PASSWORD=admin123
+      - JAVA_TOOL_OPTIONS=-XX:-UseContainerSupport
+    volumes:
+      - cloudbeaver_data:/opt/cloudbeaver/workspace
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8978/ || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
