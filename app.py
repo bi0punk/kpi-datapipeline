@@ -1,8 +1,8 @@
 import datetime
 
-import json 
-import logging from kafka 
-import KafkaConsumer 
+import json
+import logging
+from kafka import KafkaConsumer
 import psycopg2
 
 year_part = 1 
@@ -44,21 +44,22 @@ consumer = KafkaConsumer(
 
 consumer.subscribe( topics = [ 'test' ] )
 
-for msg in consumer: logging.info( "{0}".format( msg ) )
-  store_kpi( 
-    "REQUEST_X_MINUTE",
-    build_kpi_value( msg.value["@timestamp"], minute_part ),
-    1
-  )
+for msg in consumer:
+    logging.info("{0}".format(msg))
+    store_kpi(
+        "REQUEST_X_MINUTE",
+        build_kpi_value(msg.value["@timestamp"], minute_part),
+        1
+    )
 
-  store_kpi( 
-    "REQUEST_X_HOUR",
-    build_kpi_value( msg.value["@timestamp"], hour_part ),
-    1
-  )
+    store_kpi(
+        "REQUEST_X_HOUR",
+        build_kpi_value(msg.value["@timestamp"], hour_part),
+        1
+    )
 
-  store_kpi( 
-    "REQUEST_X_DAY",
-    build_kpi_value( msg.value["@timestamp"], day_part ),
-    1
-  )
+    store_kpi(
+        "REQUEST_X_DAY",
+        build_kpi_value(msg.value["@timestamp"], day_part),
+        1
+    )
