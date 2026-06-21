@@ -27,12 +27,14 @@ def store_kpi( kpi_key, kpi_value, vcount ):
   cur.execute( sql, (kpi_key, kpi_value, vcount) )
   conn.commit()    
 
+import os
+
 conn = psycopg2.connect(
-  database="postgresdb", 
-  host="127.0.0.1", 
-  user="postgres", 
-  password="postgres", 
-  port="5432" 
+  database=os.getenv("DB_NAME", "postgresdb"), 
+  host=os.getenv("DB_HOST", "127.0.0.1"), 
+  user=os.getenv("DB_USER", "postgres"), 
+  password=os.getenv("DB_PASSWORD", "postgres"), 
+  port=os.getenv("DB_PORT", "5432") 
 ) 
 cur = conn.cursor()
 
