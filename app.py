@@ -1,7 +1,7 @@
 import datetime
-
 import json
 import logging
+import os
 from kafka import KafkaConsumer
 import psycopg2
 
@@ -26,8 +26,6 @@ def store_kpi( kpi_key, kpi_value, vcount ):
 
   cur.execute( sql, (kpi_key, kpi_value, vcount) )
   conn.commit()    
-
-import os
 
 conn = psycopg2.connect(
   database=os.getenv("DB_NAME", "postgresdb"), 
