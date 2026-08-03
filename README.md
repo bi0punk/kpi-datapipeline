@@ -4,7 +4,7 @@ Streaming data pipeline that reads JSON messages from Apache Kafka, computes KPI
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue)](https://python.org)
-[![CI](https://github.com/tu-usuario/pipeline_kpi/actions/workflows/ci.yml/badge.svg)](https://github.com/tu-usuario/pipeline_kpi/actions/workflows/ci.yml)
+[![CI](https://github.com/bi0punk/pipeline_kpi/actions/workflows/ci.yml/badge.svg)](https://github.com/bi0punk/pipeline_kpi/actions/workflows/ci.yml)
 
 ## Tabla de Contenidos
 
@@ -69,7 +69,7 @@ pipeline_kpi/
 ## Instalación
 
 ```bash
-git clone https://github.com/tu-usuario/pipeline_kpi.git
+git clone https://github.com/bi0punk/pipeline_kpi.git
 cd pipeline_kpi
 cp .env.example .env
 # Editar credenciales si es necesario
