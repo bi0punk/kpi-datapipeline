@@ -1,25 +1,28 @@
-# pipeline_kpi
+# kpi-datapipeline
 
-Streaming data pipeline that reads JSON messages from Apache Kafka, computes KPIs (requests per minute/hour/day), and stores aggregated counts in PostgreSQL.
+Pipeline de datos en streaming que lee mensajes JSON desde Apache Kafka, calcula KPIs (peticiones por minuto/hora/día) y guarda conteos agregados en PostgreSQL.
 
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.11+-blue)](https://python.org)
-[![CI](https://github.com/bi0punk/pipeline_kpi/actions/workflows/ci.yml/badge.svg)](https://github.com/bi0punk/pipeline_kpi/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python)](https://python.org)
+[![Kafka](https://img.shields.io/badge/Apache_Kafka-231F20?logo=apachekafka)](https://kafka.apache.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)](https://www.docker.com/)
+[![CI](https://github.com/bi0punk/kpi-datapipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/bi0punk/kpi-datapipeline/actions)
+[![Licencia](https://img.shields.io/badge/Licencia-MIT-blue)](LICENSE)
 
-## Tabla de Contenidos
+## Contenido
 
 - [Características](#características)
-- [Stack](#stack)
 - [Arquitectura](#arquitectura)
-- [Requisitos](#requisitos)
+- [Stack](#stack)
+- [Estructura del repositorio](#estructura-del-repositorio)
+- [Servicios](#servicios)
 - [Instalación](#instalación)
 - [Uso](#uso)
-- [Tests](#tests)
 - [Configuración](#configuración)
-- [CI](#ci)
 - [Datos](#datos)
 - [Seguridad](#seguridad)
-- [Limitaciones / Roadmap](#limitaciones--roadmap)
+- [Tests / CI](#tests--ci)
+- [Roadmap](#roadmap)
 - [Licencia](#licencia)
 
 ## Características
@@ -31,14 +34,40 @@ Streaming data pipeline that reads JSON messages from Apache Kafka, computes KPI
 - Pipeline containerizado con Docker Compose
 - Log processor con Fluent Bit
 
-## Stack
-
-- Python 3.11+, Kafka (confluent-kafka), PostgreSQL, Docker Compose, Fluent Bit
-
 ## Arquitectura
 
+```mermaid
+flowchart TD
+  NGINX[nginx.log] --> FLUENT[Fluent Bit: tail + parser nginx]
+  FLUENT -->|Brokers 127.0.0.1:29092, Topic test| KAFKA[Apache Kafka]
+  KAFKA --> CONSUMER[KpiProcessor: KafkaConsumer group kpi-processor]
+  CONSUMER --> TS{¿@timestamp?}
+  TS -->|sí| MIN[KPI REQUEST_X_MINUTE]
+  TS -->|sí| HOUR[KPI REQUEST_X_HOUR]
+  TS -->|sí| DAY[KPI REQUEST_X_DAY]
+  MIN --> PG[PostgreSQL: INSERT ... ON CONFLICT DO UPDATE]
+  HOUR --> PG
+  DAY --> PG
+  PG --> CB[CloudBeaver: interfaz web de DB]
 ```
-pipeline_kpi/
+
+Flujo: Fluent Bit taila logs de nginx y los publica en Kafka; el consumer `KpiProcessor` lee los mensajes, extrae `@timestamp` y upserta 3 KPIs por mensaje en PostgreSQL con contadores acumulativos.
+
+## Stack
+
+| Componente | Tecnología |
+|---|---|
+| Consumo | Python 3.11+, kafka-python |
+| Broker | Apache Kafka (bitnami) |
+| DB | PostgreSQL 15 |
+| Logs | Fluent Bit (tail + parser nginx) |
+| UI DB | CloudBeaver |
+| Orquestación | Docker Compose |
+
+## Estructura del repositorio
+
+```
+kpi-datapipeline/
 ├── app.py                    # Consumer KPI processor
 ├── docker-compose.yml        # Zookeeper, Kafka, PostgreSQL, CloudBeaver
 ├── dockerfile                # Imagen del consumer
@@ -48,29 +77,27 @@ pipeline_kpi/
 ├── requirements.txt
 ├── pyproject.toml
 ├── .env.example
+├── .github/workflows/ci.yml
 └── README.md
 ```
 
 ## Servicios
 
-| Servicio    | Puerto   | Descripción                     |
-|-------------|----------|----------------------------------|
-| Zookeeper   | 2181     | Coordinación Kafka               |
-| Kafka       | 9092/29092 | Broker de mensajes             |
-| PostgreSQL  | 5432     | Almacenamiento de KPIs           |
-| CloudBeaver | 8080     | Cliente web de base de datos     |
-| Fluent Bit  | —        | Procesador de logs               |
-
-## Requisitos
-
-- Docker Engine 24+
-- Docker Compose v2
+| Servicio | Puerto | Descripción |
+|---|---|---|
+| Zookeeper | 2181 | Coordinación Kafka |
+| Kafka | 9092/29092 | Broker de mensajes |
+| PostgreSQL | 5432 | Almacenamiento de KPIs |
+| CloudBeaver | 8080 | Cliente web de base de datos |
+| Fluent Bit | — | Procesador de logs |
 
 ## Instalación
 
+Requisitos: Docker Engine 24+ y Docker Compose v2.
+
 ```bash
-git clone https://github.com/bi0punk/pipeline_kpi.git
-cd pipeline_kpi
+git clone https://github.com/bi0punk/kpi-datapipeline.git
+cd kpi-datapipeline
 cp .env.example .env
 # Editar credenciales si es necesario
 ```
@@ -83,35 +110,27 @@ docker compose up -d
 
 # Construir y ejecutar el consumer
 docker build -t kpi-consumer .
-docker run --network pipeline_kpi_backend_net kpi-consumer
+docker run --network kpi-datapipeline_backend_net kpi-consumer
 ```
 
 El consumer lee del tópico `test` y upserta agregaciones KPI en PostgreSQL.
-
-## Tests
-
-```bash
-pip install pytest ruff
-pytest -q
-ruff check .
-```
 
 ## Configuración
 
 Variables de entorno (ver `.env.example`):
 
-| Variable        | Default      | Descripción                        |
-|-----------------|--------------|------------------------------------|
-| `DB_NAME`       | `postgresdb` | Base de datos PostgreSQL           |
-| `DB_HOST`       | `127.0.0.1`  | Host de PostgreSQL                 |
-| `DB_USER`       | `postgres`   | Usuario PostgreSQL                 |
-| `DB_PASSWORD`   | `postgres`   | Contraseña PostgreSQL              |
-| `DB_PORT`       | `5432`       | Puerto PostgreSQL                  |
-| `CB_ADMIN_PASSWORD` | `admin123` | Password admin de CloudBeaver    |
-
-## CI
-
-GitHub Actions ejecuta ruff lint + pytest en cada push y PR.
+| Variable | Default | Descripción |
+|---|---|---|
+| `DB_NAME` | `postgresdb` | Base de datos PostgreSQL |
+| `DB_HOST` | `127.0.0.1` | Host de PostgreSQL |
+| `DB_USER` | `postgres` | Usuario PostgreSQL |
+| `DB_PASSWORD` | `postgres` | Contraseña PostgreSQL |
+| `DB_PORT` | `5432` | Puerto PostgreSQL |
+| `KAFKA_BOOTSTRAP_SERVERS` | `127.0.0.1:9092` | Servidores Kafka |
+| `KAFKA_TOPIC` | `test` | Tópico a consumir |
+| `KAFKA_GROUP` | `kpi-processor` | Grupo de consumidores |
+| `DB_TABLE` | `test.kpis` | Tabla destino |
+| `CB_ADMIN_PASSWORD` | `admin123` | Password admin de CloudBeaver |
 
 ## Datos
 
@@ -136,8 +155,19 @@ CREATE TABLE test.kpis (
 - CloudBeaver admin password configurable via `CB_ADMIN_PASSWORD`
 - Kafka listeners usan PLAINTEXT (solo desarrollo — usar SASL_SSL en producción)
 
-## Limitaciones / Roadmap
+## Tests / CI
 
+CI: GitHub Actions ejecuta ruff lint + pytest en cada push y PR.
+
+```bash
+pip install pytest ruff
+pytest -q
+ruff check .
+```
+
+## Roadmap
+
+- [x] Pipeline Kafka → PostgreSQL con KPIs por minuto/hora/día
 - [ ] Ventanas de tiempo deslizantes (Sliding windows)
 - [ ] Exportación de KPIs a Prometheus
 - [ ] Dashboard en tiempo real con Grafana
@@ -145,4 +175,4 @@ CREATE TABLE test.kpis (
 
 ## Licencia
 
-MIT
+MIT — ver [LICENSE](LICENSE).
