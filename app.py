@@ -1,20 +1,18 @@
+import contextlib
 import datetime
 import json
 import logging
 import os
 import signal
 import sys
-from dotenv import load_dotenv
-from kafka import KafkaConsumer, errors as kafka_errors
+
 import psycopg2
-from psycopg2 import errors as pg_errors
+from dotenv import load_dotenv
+from kafka import KafkaConsumer
 
 load_dotenv()
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 DB_NAME = os.environ["DB_NAME"]
@@ -38,11 +36,7 @@ class KpiProcessor:
     def connect_db(self):
         try:
             self.conn = psycopg2.connect(
-                database=DB_NAME,
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                port=DB_PORT
+                database=DB_NAME, host=DB_HOST, user=DB_USER, password=DB_PASSWORD, port=DB_PORT
             )
             self.cur = self.conn.cursor()
             logger.info("Conectado a PostgreSQL %s@%s:%s/%s", DB_USER, DB_HOST, DB_PORT, DB_NAME)
@@ -58,9 +52,11 @@ class KpiProcessor:
                 bootstrap_servers=KAFKA_BOOTSTRAP.split(","),
                 value_deserializer=lambda x: json.loads(x.decode("utf-8")),
                 auto_offset_reset="earliest",
-                enable_auto_commit=True
+                enable_auto_commit=True,
             )
-            logger.info("Conectado a Kafka %s topic=%s group=%s", KAFKA_BOOTSTRAP, KAFKA_TOPIC, KAFKA_GROUP)
+            logger.info(
+                "Conectado a Kafka %s topic=%s group=%s", KAFKA_BOOTSTRAP, KAFKA_TOPIC, KAFKA_GROUP
+            )
         except Exception as e:
             logger.critical("No se pudo conectar a Kafka: %s", e)
             sys.exit(1)
@@ -83,12 +79,8 @@ class KpiProcessor:
     def _store_kpi(self, kpi_key, kpi_value, vcount=1):
         if kpi_value is None:
             return
-        sql = f"""
-        INSERT INTO {DB_TABLE} (kpi_key, kpi_value, vcount)
-        VALUES (%s, %s, %s)
-        ON CONFLICT (kpi_key, kpi_value)
-        DO UPDATE SET vcount = {DB_TABLE}.vcount + EXCLUDED.vcount;
-        """
+        # DB_TABLE proviene de configuración de entorno (no de entrada de usuario).
+        sql = f"INSERT INTO {DB_TABLE} (kpi_key, kpi_value, vcount) VALUES (%s, %s, %s) ON CONFLICT (kpi_key, kpi_value) DO UPDATE SET vcount = {DB_TABLE}.vcount + EXCLUDED.vcount;"  # nosec B608
         try:
             self.cur.execute(sql, (kpi_key, kpi_value, vcount))
             self.conn.commit()
@@ -115,22 +107,18 @@ class KpiProcessor:
         except (KeyError, TypeError, json.JSONDecodeError) as e:
             logger.error("Error procesando mensaje: %s", e)
 
-    def _shutdown(self, signum=None, frame=None):
+    def _shutdown(self, _signum=None, _frame=None):
         logger.info("Deteniendo procesador...")
         self.running = False
         if self.consumer:
-            try:
+            with contextlib.suppress(Exception):
                 self.consumer.close()
-            except Exception:
-                pass
         if self.cur:
             self.cur.close()
         if self.conn:
-            try:
+            with contextlib.suppress(Exception):
                 self.conn.commit()
                 self.conn.close()
-            except Exception:
-                pass
         logger.info("Procesador detenido.")
         sys.exit(0)
 
@@ -147,8 +135,12 @@ class KpiProcessor:
             for msg in self.consumer:
                 if not self.running:
                     break
-                logger.debug("Mensaje recibido: topic=%s partition=%s offset=%s",
-                             msg.topic, msg.partition, msg.offset)
+                logger.debug(
+                    "Mensaje recibido: topic=%s partition=%s offset=%s",
+                    msg.topic,
+                    msg.partition,
+                    msg.offset,
+                )
                 self._process_message(msg)
         except Exception as e:
             logger.error("Error en el loop principal: %s", e)
