@@ -4,7 +4,6 @@ Pipeline de streaming que consume eventos JSON desde **Apache Kafka**, calcula
 KPIs por minuto, hora y día, y los persiste en **PostgreSQL** con contadores
 acumulativos.
 
-[![CI](https://github.com/bi0punk/kpi-datapipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/bi0punk/kpi-datapipeline/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python)](https://python.org)
 [![Kafka](https://img.shields.io/badge/Apache_Kafka-3.9-231F20?logo=apachekafka)](https://kafka.apache.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://www.postgresql.org/)
@@ -141,14 +140,9 @@ uv pip install -e ".[dev]"
 
 **27 tests**, cobertura **74 %** (gate 65 %).
 
-CI (`.github/workflows/ci.yml`), en `dev`, `main` y tags:
-
-| Job | Qué hace |
-|---|---|
-| `quality` | ruff + mypy |
-| `test (3.11 / 3.12)` | pytest + cobertura |
-| `audit` | `pip-audit` |
-| `docker` | build, push a GHCR y `docker compose config -q` |
+GitHub solo aloja el código. La integración continua y el despliegue se
+ejecutan en GitLab/entorno local; los workflows de `.github/` están
+deshabilitados en GitHub. La validación es la de la sección anterior.
 
 ## Estructura
 
