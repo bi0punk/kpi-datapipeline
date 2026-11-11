@@ -139,7 +139,7 @@ uv pip install -e ".[dev]"
 .venv/bin/pip-audit --skip-editable
 ```
 
-**27 tests**, cobertura **71 %** (gate 65 %).
+**27 tests**, cobertura **74 %** (gate 65 %).
 
 CI (`.github/workflows/ci.yml`), en `dev`, `main` y tags:
 
