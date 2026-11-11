@@ -64,8 +64,11 @@ kafka-consumer-groups.sh --bootstrap-server kafka:9092 \
 docker pull ghcr.io/bi0punk/kpi-datapipeline:latest
 ```
 
-`main` publica `:latest`; los tags `vX.Y.Z` generan `:X.Y.Z`. La imagen corre
-como uid 10001 y su entrypoint es `kpi-processor`.
+La imagen `ghcr.io/bi0punk/kpi-datapipeline:latest` corresponde a la **versión
+1.0.0** (histórico). GitHub solo aloja el código; para desplegar se construye en
+local/GitLab con `docker compose build`.
+
+La imagen corre como uid 10001 y su entrypoint es `kpi-processor`.
 
 ## 6. Troubleshooting
 
