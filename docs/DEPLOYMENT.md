@@ -1,5 +1,7 @@
 # Despliegue y demo
 
+> Las imágenes publicadas usan **Python 3.15**. Para el entorno local se recomienda 3.12.
+
 ## 1. Stack local (compose)
 
 ```bash
