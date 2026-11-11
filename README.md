@@ -140,9 +140,9 @@ uv pip install -e ".[dev]"
 
 **27 tests**, cobertura **74 %** (gate 65 %).
 
-GitHub solo aloja el código. La integración continua y el despliegue se
-ejecutan en GitLab/entorno local; los workflows de `.github/` están
-deshabilitados en GitHub. La validación es la de la sección anterior.
+GitHub solo aloja el código. La integración continua está en `.gitlab-ci.yml`
+(GitLab) y el despliegue se ejecuta en el entorno local con Docker Compose.
+La validación equivalente en local es la de la sección anterior.
 
 ## Estructura
 
