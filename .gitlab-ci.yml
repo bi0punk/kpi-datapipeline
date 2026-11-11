@@ -65,7 +65,7 @@ deploy:
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
   tags:
-    - [local]
+    - local
   script:
     - docker compose config -q
     - docker compose up -d --build
