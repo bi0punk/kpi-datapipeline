@@ -8,6 +8,7 @@ WORKDIR /app
 
 COPY pyproject.toml ./
 COPY app.py kpi.py ./
+COPY scripts ./scripts
 
 RUN pip install --no-cache-dir . \
     && useradd --create-home --uid 10001 --shell /usr/sbin/nologin kpi
