@@ -9,6 +9,7 @@ import os
 import signal
 import sys
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -38,25 +39,25 @@ class Config:
     flush_max_rows: int = 500
 
 
-def load_config(env: dict[str, str] | None = None) -> Config:
+def load_config(env: Mapping[str, str] | None = None) -> Config:
     """Lee la configuración del entorno y falla con un mensaje claro si falta algo."""
-    env = env if env is not None else os.environ
-    missing = [key for key in ("DB_NAME", "DB_HOST", "DB_USER", "DB_PASSWORD") if not env.get(key)]
+    source: Mapping[str, str] = os.environ if env is None else env
+    missing = [key for key in ("DB_NAME", "DB_HOST", "DB_USER", "DB_PASSWORD") if not source.get(key)]
     if missing:
         raise RuntimeError("Faltan variables de entorno: " + ", ".join(missing))
 
     return Config(
-        db_name=env["DB_NAME"],
-        db_host=env["DB_HOST"],
-        db_user=env["DB_USER"],
-        db_password=env["DB_PASSWORD"],
-        db_port=env.get("DB_PORT", "5432"),
-        db_table=env.get("DB_TABLE", DEFAULT_TABLE),
-        kafka_bootstrap=env.get("KAFKA_BOOTSTRAP_SERVERS", "127.0.0.1:9092"),
-        kafka_topic=env.get("KAFKA_TOPIC", "test"),
-        kafka_group=env.get("KAFKA_GROUP", "kpi-processor"),
-        flush_interval=float(env.get("KPI_FLUSH_INTERVAL", "2.0")),
-        flush_max_rows=int(env.get("KPI_FLUSH_MAX_ROWS", "500")),
+        db_name=source["DB_NAME"],
+        db_host=source["DB_HOST"],
+        db_user=source["DB_USER"],
+        db_password=source["DB_PASSWORD"],
+        db_port=source.get("DB_PORT", "5432"),
+        db_table=source.get("DB_TABLE", DEFAULT_TABLE),
+        kafka_bootstrap=source.get("KAFKA_BOOTSTRAP_SERVERS", "127.0.0.1:9092"),
+        kafka_topic=source.get("KAFKA_TOPIC", "test"),
+        kafka_group=source.get("KAFKA_GROUP", "kpi-processor"),
+        flush_interval=float(source.get("KPI_FLUSH_INTERVAL", "2.0")),
+        flush_max_rows=int(source.get("KPI_FLUSH_MAX_ROWS", "500")),
     )
 
 
